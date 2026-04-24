@@ -84,7 +84,7 @@ $cmbDuration = New-Object System.Windows.Forms.ComboBox
 $cmbDuration.DropDownStyle = "DropDownList"
 $cmbDuration.Size     = New-Object System.Drawing.Size(130, 28)
 $cmbDuration.Location = New-Object System.Drawing.Point(100, 78)
-$cmbDuration.Items.AddRange(@("10 minutes", "30 minutes", "1 hour", "2 hours", "4 hours"))
+$cmbDuration.Items.AddRange(@("Unlimited", "10 minutes", "30 minutes", "1 hour", "2 hours", "4 hours"))
 $cmbDuration.SelectedIndex = 0
 
 $form.Controls.AddRange(@($lblDuration, $cmbDuration))
@@ -145,8 +145,8 @@ $timer.Add_Tick({
         $script:lastMoveTime = [DateTime]::UtcNow
     }
 
-    # Auto-stop when duration expires
-    if ($script:stopTime -ne $null) {
+    # Auto-stop when duration expires (skip if Unlimited)
+    if ($null -ne $script:stopTime) {
         $left = ($script:stopTime - [DateTime]::UtcNow).TotalSeconds
         if ($left -le 0) {
             $timer.Stop()
@@ -175,14 +175,18 @@ $btnStart.Add_Click({
         $script:running      = $true
 
         # Calculate stop time from dropdown
-        $durationMinutes = switch ($cmbDuration.SelectedItem) {
-            "10 minutes" { 10 }
-            "30 minutes" { 30 }
-            "1 hour"     { 60 }
-            "2 hours"    { 120 }
-            "4 hours"    { 240 }
+        if ($cmbDuration.SelectedItem -eq "Unlimited") {
+            $script:stopTime = $null
+        } else {
+            $durationMinutes = switch ($cmbDuration.SelectedItem) {
+                "10 minutes" { 10 }
+                "30 minutes" { 30 }
+                "1 hour"     { 60 }
+                "2 hours"    { 120 }
+                "4 hours"    { 240 }
+            }
+            $script:stopTime = [DateTime]::UtcNow.AddMinutes($durationMinutes)
         }
-        $script:stopTime = [DateTime]::UtcNow.AddMinutes($durationMinutes)
         $cmbDuration.Enabled = $false
 
         $timer.Start()
@@ -208,6 +212,9 @@ $btnQuit.Add_Click({
 })
 
 $form.Add_FormClosing({ $timer.Stop() })
+
+# ── Auto-start on launch ────────────────────────────────────────────
+$form.Add_Shown({ $btnStart.PerformClick() })
 
 # ── Go ───────────────────────────────────────────────────────────────
 [System.Windows.Forms.Application]::Run($form)

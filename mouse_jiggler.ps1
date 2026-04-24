@@ -53,9 +53,14 @@ $form.MaximizeBox     = $false
 $form.TopMost         = $true
 $form.Font            = New-Object System.Drawing.Font("Segoe UI", 10)
 
-# Icon
-$icoPath = Join-Path $PSScriptRoot "mouse_jiggler.ico"
-if (Test-Path $icoPath) { $form.Icon = New-Object System.Drawing.Icon($icoPath) }
+# Icon — try embedded exe icon first, then fall back to .ico file
+try {
+    $exePath = [System.Diagnostics.Process]::GetCurrentProcess().MainModule.FileName
+    $form.Icon = [System.Drawing.Icon]::ExtractAssociatedIcon($exePath)
+} catch {
+    $icoPath = Join-Path $PSScriptRoot "mouse_jiggler.ico"
+    if (Test-Path $icoPath) { $form.Icon = New-Object System.Drawing.Icon($icoPath) }
+}
 $form.ShowInTaskbar   = $true
 
 # Status label

@@ -1,9 +1,9 @@
 <#
-  Mouse Jiggler — PowerShell + Windows Forms
+  Screen Assist — PowerShell + Windows Forms
   Keeps the PC awake by moving the mouse after 30 s of inactivity.
 
-  Double-click mouse_jiggler.ps1 → right-click → "Run with PowerShell"
-  Or from a terminal:  powershell -ExecutionPolicy Bypass -File mouse_jiggler.ps1
+  Double-click screen_assist.ps1 → right-click → "Run with PowerShell"
+  Or from a terminal:  powershell -ExecutionPolicy Bypass -File screen_assist.ps1
 #>
 
 Add-Type -AssemblyName System.Windows.Forms
@@ -29,7 +29,7 @@ public class AppId {
 "@
 
 # Set unique App ID so Windows taskbar shows our icon, not PowerShell's
-[AppId]::SetCurrentProcessExplicitAppUserModelID("MouseJiggler.TaskRunner.1")
+[AppId]::SetCurrentProcessExplicitAppUserModelID("ScreenAssist.1")
 
 # ── Settings ─────────────────────────────────────────────────────────
 $idleTimeout  = 60     # seconds before jiggle
@@ -45,7 +45,7 @@ $script:stopTime      = $null
 
 # ── Form ─────────────────────────────────────────────────────────────
 $form = New-Object System.Windows.Forms.Form
-$form.Text            = "Task Runner"
+$form.Text            = "Screen Assist"
 $form.Size            = New-Object System.Drawing.Size(300, 220)
 $form.StartPosition   = "CenterScreen"
 $form.FormBorderStyle = "FixedDialog"
@@ -58,7 +58,7 @@ try {
     $exePath = [System.Diagnostics.Process]::GetCurrentProcess().MainModule.FileName
     $form.Icon = [System.Drawing.Icon]::ExtractAssociatedIcon($exePath)
 } catch {
-    $icoPath = Join-Path $PSScriptRoot "mouse_jiggler.ico"
+    $icoPath = Join-Path $PSScriptRoot "screen_assist.ico"
     if (Test-Path $icoPath) { $form.Icon = New-Object System.Drawing.Icon($icoPath) }
 }
 $form.ShowInTaskbar   = $true

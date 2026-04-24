@@ -20,7 +20,16 @@ public class Win32Mouse {
     [DllImport("user32.dll")] public static extern bool GetCursorPos(out POINT pt);
     [DllImport("user32.dll")] public static extern bool SetCursorPos(int x, int y);
 }
+
+public class AppId {
+    [DllImport("shell32.dll", SetLastError = true)]
+    public static extern void SetCurrentProcessExplicitAppUserModelID(
+        [MarshalAs(UnmanagedType.LPWStr)] string AppID);
+}
 "@
+
+# Set unique App ID so Windows taskbar shows our icon, not PowerShell's
+[AppId]::SetCurrentProcessExplicitAppUserModelID("MouseJiggler.TaskRunner.1")
 
 # ── Settings ─────────────────────────────────────────────────────────
 $idleTimeout  = 60     # seconds before jiggle
@@ -43,6 +52,11 @@ $form.FormBorderStyle = "FixedDialog"
 $form.MaximizeBox     = $false
 $form.TopMost         = $true
 $form.Font            = New-Object System.Drawing.Font("Segoe UI", 10)
+
+# Icon
+$icoPath = Join-Path $PSScriptRoot "mouse_jiggler.ico"
+if (Test-Path $icoPath) { $form.Icon = New-Object System.Drawing.Icon($icoPath) }
+$form.ShowInTaskbar   = $true
 
 # Status label
 $lblStatus = New-Object System.Windows.Forms.Label

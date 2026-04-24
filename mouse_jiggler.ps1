@@ -23,7 +23,7 @@ public class Win32Mouse {
 "@
 
 # ── Settings ─────────────────────────────────────────────────────────
-$idleTimeout  = 30     # seconds before jiggle
+$idleTimeout  = 60     # seconds before jiggle
 $jiggleRange  = 1      # max pixels per jiggle
 $pollMs       = 500    # timer tick interval
 
@@ -32,11 +32,12 @@ $script:lastX         = 0
 $script:lastY         = 0
 $script:lastMoveTime  = [DateTime]::UtcNow
 $script:running       = $false
+$script:stopTime      = $null
 
 # ── Form ─────────────────────────────────────────────────────────────
 $form = New-Object System.Windows.Forms.Form
-$form.Text            = "Mouse Jiggler"
-$form.Size            = New-Object System.Drawing.Size(300, 180)
+$form.Text            = "Task Runner"
+$form.Size            = New-Object System.Drawing.Size(300, 220)
 $form.StartPosition   = "CenterScreen"
 $form.FormBorderStyle = "FixedDialog"
 $form.MaximizeBox     = $false
@@ -59,21 +60,43 @@ $lblTimer.AutoSize  = $true
 $lblTimer.Location  = New-Object System.Drawing.Point(90, 45)
 $form.Controls.Add($lblTimer)
 
+# Duration dropdown
+$lblDuration = New-Object System.Windows.Forms.Label
+$lblDuration.Text     = "Duration:"
+$lblDuration.AutoSize = $true
+$lblDuration.Location = New-Object System.Drawing.Point(20, 82)
+
+$cmbDuration = New-Object System.Windows.Forms.ComboBox
+$cmbDuration.DropDownStyle = "DropDownList"
+$cmbDuration.Size     = New-Object System.Drawing.Size(130, 28)
+$cmbDuration.Location = New-Object System.Drawing.Point(100, 78)
+$cmbDuration.Items.AddRange(@("10 minutes", "30 minutes", "1 hour", "2 hours", "4 hours"))
+$cmbDuration.SelectedIndex = 0
+
+$form.Controls.AddRange(@($lblDuration, $cmbDuration))
+
+# Remaining-time label
+$lblRemaining = New-Object System.Windows.Forms.Label
+$lblRemaining.Text     = ""
+$lblRemaining.AutoSize = $true
+$lblRemaining.Location = New-Object System.Drawing.Point(90, 110)
+$form.Controls.Add($lblRemaining)
+
 # Buttons
 $btnStart = New-Object System.Windows.Forms.Button
 $btnStart.Text     = "Start"
 $btnStart.Size     = New-Object System.Drawing.Size(75, 32)
-$btnStart.Location = New-Object System.Drawing.Point(20, 90)
+$btnStart.Location = New-Object System.Drawing.Point(20, 138)
 
 $btnStop = New-Object System.Windows.Forms.Button
 $btnStop.Text     = "Stop"
 $btnStop.Size     = New-Object System.Drawing.Size(75, 32)
-$btnStop.Location = New-Object System.Drawing.Point(108, 90)
+$btnStop.Location = New-Object System.Drawing.Point(108, 138)
 
 $btnQuit = New-Object System.Windows.Forms.Button
 $btnQuit.Text     = "Quit"
 $btnQuit.Size     = New-Object System.Drawing.Size(75, 32)
-$btnQuit.Location = New-Object System.Drawing.Point(196, 90)
+$btnQuit.Location = New-Object System.Drawing.Point(196, 138)
 
 $form.Controls.AddRange(@($btnStart, $btnStop, $btnQuit))
 
@@ -107,6 +130,24 @@ $timer.Add_Tick({
         $script:lastY        = $newY
         $script:lastMoveTime = [DateTime]::UtcNow
     }
+
+    # Auto-stop when duration expires
+    if ($script:stopTime -ne $null) {
+        $left = ($script:stopTime - [DateTime]::UtcNow).TotalSeconds
+        if ($left -le 0) {
+            $timer.Stop()
+            $script:running      = $false
+            $script:stopTime     = $null
+            $lblStatus.Text      = "Stopped"
+            $lblStatus.ForeColor = [System.Drawing.Color]::Black
+            $lblTimer.Text       = "Idle: --"
+            $lblRemaining.Text   = "Timer finished"
+            $cmbDuration.Enabled = $true
+        } else {
+            $ts = [TimeSpan]::FromSeconds([Math]::Ceiling($left))
+            $lblRemaining.Text = "Stops in: $($ts.ToString('hh\:mm\:ss'))"
+        }
+    }
 })
 
 # ── Button handlers ──────────────────────────────────────────────────
@@ -118,18 +159,33 @@ $btnStart.Add_Click({
         $script:lastY        = $pt.Y
         $script:lastMoveTime = [DateTime]::UtcNow
         $script:running      = $true
+
+        # Calculate stop time from dropdown
+        $durationMinutes = switch ($cmbDuration.SelectedItem) {
+            "10 minutes" { 10 }
+            "30 minutes" { 30 }
+            "1 hour"     { 60 }
+            "2 hours"    { 120 }
+            "4 hours"    { 240 }
+        }
+        $script:stopTime = [DateTime]::UtcNow.AddMinutes($durationMinutes)
+        $cmbDuration.Enabled = $false
+
         $timer.Start()
-        $lblStatus.Text = "Running"
+        $lblStatus.Text      = "Running"
         $lblStatus.ForeColor = [System.Drawing.Color]::Green
     }
 })
 
 $btnStop.Add_Click({
     $timer.Stop()
-    $script:running   = $false
-    $lblStatus.Text   = "Stopped"
+    $script:running      = $false
+    $script:stopTime     = $null
+    $lblStatus.Text      = "Stopped"
     $lblStatus.ForeColor = [System.Drawing.Color]::Black
-    $lblTimer.Text    = "Idle: --"
+    $lblTimer.Text       = "Idle: --"
+    $lblRemaining.Text   = ""
+    $cmbDuration.Enabled = $true
 })
 
 $btnQuit.Add_Click({

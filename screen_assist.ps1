@@ -104,7 +104,7 @@ $cmbIdle = New-Object System.Windows.Forms.ComboBox
 $cmbIdle.DropDownStyle = "DropDownList"
 $cmbIdle.Size     = New-Object System.Drawing.Size(130, 28)
 $cmbIdle.Location = New-Object System.Drawing.Point(100, 112)
-$cmbIdle.Items.AddRange(@("5 seconds", "10 seconds", "30 seconds", "60 seconds", "5 minutes"))
+$cmbIdle.Items.AddRange(@("5 seconds", "10 seconds", "30 seconds", "60 seconds", "2 minutes", "3 minutes", "4 minutes", "5 minutes"))
 $cmbIdle.SelectedIndex = 3   # default 60 seconds
 
 $form.Controls.AddRange(@($lblIdle, $cmbIdle))
@@ -169,6 +169,9 @@ $timer.Add_Tick({
         "10 seconds" { 10 }
         "30 seconds" { 30 }
         "60 seconds" { 60 }
+        "2 minutes"  { 120 }
+        "3 minutes"  { 180 }
+        "4 minutes"  { 240 }
         "5 minutes"  { 300 }
     }
     $remaining = [Math]::Max(0, $currentIdleTimeout - $idle)

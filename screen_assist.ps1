@@ -46,7 +46,7 @@ $script:stopTime      = $null
 # ── Form ─────────────────────────────────────────────────────────────
 $form = New-Object System.Windows.Forms.Form
 $form.Text            = "Screen Assist"
-$form.Size            = New-Object System.Drawing.Size(300, 220)
+$form.Size            = New-Object System.Drawing.Size(300, 255)
 $form.StartPosition   = "CenterScreen"
 $form.FormBorderStyle = "FixedDialog"
 $form.MaximizeBox     = $false
@@ -94,28 +94,43 @@ $cmbDuration.SelectedIndex = 0
 
 $form.Controls.AddRange(@($lblDuration, $cmbDuration))
 
+# Idle time dropdown
+$lblIdle = New-Object System.Windows.Forms.Label
+$lblIdle.Text     = "Idle time:"
+$lblIdle.AutoSize = $true
+$lblIdle.Location = New-Object System.Drawing.Point(20, 116)
+
+$cmbIdle = New-Object System.Windows.Forms.ComboBox
+$cmbIdle.DropDownStyle = "DropDownList"
+$cmbIdle.Size     = New-Object System.Drawing.Size(130, 28)
+$cmbIdle.Location = New-Object System.Drawing.Point(100, 112)
+$cmbIdle.Items.AddRange(@("5 seconds", "10 seconds", "30 seconds", "60 seconds", "5 minutes"))
+$cmbIdle.SelectedIndex = 3   # default 60 seconds
+
+$form.Controls.AddRange(@($lblIdle, $cmbIdle))
+
 # Remaining-time label
 $lblRemaining = New-Object System.Windows.Forms.Label
 $lblRemaining.Text     = ""
 $lblRemaining.AutoSize = $true
-$lblRemaining.Location = New-Object System.Drawing.Point(90, 110)
+$lblRemaining.Location = New-Object System.Drawing.Point(90, 144)
 $form.Controls.Add($lblRemaining)
 
 # Buttons
 $btnStart = New-Object System.Windows.Forms.Button
 $btnStart.Text     = "Start"
 $btnStart.Size     = New-Object System.Drawing.Size(75, 32)
-$btnStart.Location = New-Object System.Drawing.Point(20, 138)
+$btnStart.Location = New-Object System.Drawing.Point(20, 172)
 
 $btnStop = New-Object System.Windows.Forms.Button
 $btnStop.Text     = "Stop"
 $btnStop.Size     = New-Object System.Drawing.Size(75, 32)
-$btnStop.Location = New-Object System.Drawing.Point(108, 138)
+$btnStop.Location = New-Object System.Drawing.Point(108, 172)
 
 $btnQuit = New-Object System.Windows.Forms.Button
 $btnQuit.Text     = "Quit"
 $btnQuit.Size     = New-Object System.Drawing.Size(75, 32)
-$btnQuit.Location = New-Object System.Drawing.Point(196, 138)
+$btnQuit.Location = New-Object System.Drawing.Point(196, 172)
 
 $form.Controls.AddRange(@($btnStart, $btnStop, $btnQuit))
 
@@ -134,10 +149,17 @@ $timer.Add_Tick({
     }
 
     $idle = ([DateTime]::UtcNow - $script:lastMoveTime).TotalSeconds
-    $remaining = [Math]::Max(0, $idleTimeout - $idle)
+    $currentIdleTimeout = switch ($cmbIdle.SelectedItem) {
+        "5 seconds"  { 5 }
+        "10 seconds" { 10 }
+        "30 seconds" { 30 }
+        "60 seconds" { 60 }
+        "5 minutes"  { 300 }
+    }
+    $remaining = [Math]::Max(0, $currentIdleTimeout - $idle)
     $lblTimer.Text = "Idle: $([Math]::Floor($remaining))s left"
 
-    if ($idle -ge $idleTimeout) {
+    if ($idle -ge $currentIdleTimeout) {
         $rng  = New-Object System.Random
         $dx   = $rng.Next(-$jiggleRange, $jiggleRange + 1)
         $dy   = $rng.Next(-$jiggleRange, $jiggleRange + 1)
@@ -162,6 +184,7 @@ $timer.Add_Tick({
             $lblTimer.Text       = "Idle: --"
             $lblRemaining.Text   = "Timer finished"
             $cmbDuration.Enabled = $true
+            $cmbIdle.Enabled = $true
         } else {
             $ts = [TimeSpan]::FromSeconds([Math]::Ceiling($left))
             $lblRemaining.Text = "Stops in: $($ts.ToString('hh\:mm\:ss'))"
@@ -193,6 +216,7 @@ $btnStart.Add_Click({
             $script:stopTime = [DateTime]::UtcNow.AddMinutes($durationMinutes)
         }
         $cmbDuration.Enabled = $false
+        $cmbIdle.Enabled     = $false
 
         $timer.Start()
         $lblStatus.Text      = "Running"
@@ -209,6 +233,7 @@ $btnStop.Add_Click({
     $lblTimer.Text       = "Idle: --"
     $lblRemaining.Text   = ""
     $cmbDuration.Enabled = $true
+    $cmbIdle.Enabled     = $true
 })
 
 $btnQuit.Add_Click({
